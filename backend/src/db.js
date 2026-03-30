@@ -1,6 +1,9 @@
 import initSqlJs from 'sql.js';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 function resolveSqlitePath() {
   const configured = (process.env.DATABASE_URL || '').trim();
@@ -26,7 +29,15 @@ let SQL = null;
 
 async function getSQL() {
   if (!SQL) {
-    SQL = await initSqlJs();
+    const wasmPath = require.resolve('sql.js/dist/sql-wasm.wasm');
+    SQL = await initSqlJs({
+      locateFile: (file) => {
+        if (file === 'sql-wasm.wasm') {
+          return wasmPath;
+        }
+        return file;
+      }
+    });
   }
   return SQL;
 }

@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "backend/src/index.js",
-      "use": "@vercel/node"
+  "functions": {
+    "backend/src/index.js": {
+      "runtime": "@vercel/node",
+      "includeFiles": "backend/node_modules/sql.js/dist/sql-wasm.wasm"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "backend/src/index.js"
+      "source": "/(.*)",
+      "destination": "/backend/src/index.js"
     }
   ]
 }

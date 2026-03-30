@@ -1,8 +1,11 @@
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+let bcryptLib = null;
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -12,12 +15,26 @@ function getJwtSecret() {
   return secret;
 }
 
+function getBcrypt() {
+  if (bcryptLib) {
+    return bcryptLib;
+  }
+
+  try {
+    bcryptLib = require('bcrypt');
+    return bcryptLib;
+  } catch (err) {
+    err.message = `bcrypt failed to load: ${err.message}`;
+    throw err;
+  }
+}
+
 export function hashPassword(password) {
-  return bcrypt.hashSync(password, 10);
+  return getBcrypt().hashSync(password, 10);
 }
 
 export function verifyPassword(password, hash) {
-  return bcrypt.compareSync(password, hash);
+  return getBcrypt().compareSync(password, hash);
 }
 
 export function generateToken(user) {
