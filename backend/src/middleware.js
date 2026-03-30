@@ -1,7 +1,13 @@
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-prod';
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is required');
+  }
+  return secret;
+}
 
 // Auth middleware
 export function verifyToken(req, res, next) {
@@ -12,9 +18,27 @@ export function verifyToken(req, res, next) {
 
   const token = authHeader.slice(7);
   try {
-    const user = jwt.verify(token, JWT_SECRET);
+    const user = jwt.verify(token, getJwtSecret());
     req.user = user;
     next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+export function optionalVerifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return next();
+  }
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid authorization header' });
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    req.user = jwt.verify(token, getJwtSecret());
+    return next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
@@ -39,11 +63,13 @@ export function validatePagination(req, res, next) {
 
   // Public routes allow max 100, admin routes allow up to 2000
   const maxLimit = req.user?.role === 'ADMIN' ? 2000 : 100;
-  
-  if (limit < 1 || limit > maxLimit) {
-    limit = Math.min(20, maxLimit);
+
+  if (!Number.isFinite(limit) || limit < 1 || limit > maxLimit) {
+    return res.status(400).json({ error: `limit must be between 1 and ${maxLimit}` });
   }
-  if (offset < 0) offset = 0;
+  if (!Number.isFinite(offset) || offset < 0) {
+    return res.status(400).json({ error: 'offset must be 0 or greater' });
+  }
 
   req.pagination = { limit, offset };
   next();

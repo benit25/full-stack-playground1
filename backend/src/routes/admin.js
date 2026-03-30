@@ -1,7 +1,7 @@
 import express from 'express';
 import { getDB } from '../db.js';
 import { verifyToken, requireRole, validatePagination } from '../middleware.js';
-import { generateId, getCurrentTimestamp, logAudit, escapeHtml, hashPassword } from '../utils.js';
+import { generateId, getCurrentTimestamp, logAudit, hashPassword } from '../utils.js';
 
 const router = express.Router();
 
@@ -10,6 +10,22 @@ router.use((req, res, next) => {
   verifyToken(req, res, () => {
     requireRole('ADMIN')(req, res, next);
   });
+});
+
+router.use((req, res, next) => {
+  try {
+    const db = getDB();
+    const admins = db.prepare('SELECT id, email, is_active FROM admins WHERE role = "ADMIN" AND is_active = 1').all();
+    if (admins.length !== 1) {
+      return res.status(403).json({ error: 'Single-admin policy violation' });
+    }
+    if (admins[0].email !== req.user.email) {
+      return res.status(403).json({ error: 'Only the designated admin can access admin routes' });
+    }
+    return next();
+  } catch (err) {
+    return next(err);
+  }
 });
 
 // ===== MODERATION QUEUE =====
@@ -141,7 +157,7 @@ router.put('/content/:id', (req, res, next) => {
   try {
     const db = getDB();
     const { id } = req.params;
-    const { is_published, title, body } = req.body;
+    const { is_published, title, body, media_url, content_type } = req.body;
 
     const existing = db.prepare('SELECT * FROM content WHERE id = ?').get(id);
     if (!existing) {
@@ -168,6 +184,23 @@ router.put('/content/:id', (req, res, next) => {
       updates.push('body = ?');
       params.push(body);
     }
+    if (content_type !== undefined) {
+      if (!['article', 'video_embed', 'image_story'].includes(content_type)) {
+        return res.status(400).json({ error: 'Invalid content_type' });
+      }
+      updates.push('content_type = ?');
+      params.push(content_type);
+    }
+    if (media_url === undefined || !String(media_url).trim()) {
+      return res.status(400).json({ error: 'Media URL is required for admin content edits' });
+    }
+    try {
+      new URL(media_url);
+    } catch {
+      return res.status(400).json({ error: 'Invalid media URL format' });
+    }
+    updates.push('media_url = ?');
+    params.push(media_url);
 
     updates.push('updated_at = ?');
     params.push(now);
@@ -175,7 +208,7 @@ router.put('/content/:id', (req, res, next) => {
 
     db.prepare(`UPDATE content SET ${updates.join(', ')} WHERE id = ?`).run(...params);
 
-    logAudit(db, 'content_admin_update', req.user.email, id, existing, { is_published, title }, '');
+    logAudit(db, 'content_admin_update', req.user.email, id, existing, { is_published, title, body, media_url, content_type }, '');
 
     res.json({ message: 'Content updated successfully' });
   } catch (err) {
@@ -213,24 +246,68 @@ router.get('/users', validatePagination, (req, res, next) => {
     const { search } = req.query;
 
     let query = `
-      SELECT ca.id, ca.creator_id, ca.email, ca.is_suspended, ca.is_approved, ca.created_at,
-             cr.name, cr.role, cr.is_active
+      SELECT
+        ca.id,
+        ca.creator_id,
+        ca.email,
+        ca.is_suspended,
+        ca.is_approved,
+        ca.created_at,
+        ca.updated_at,
+        cr.name,
+        cr.role,
+        cr.is_active,
+        cr.profile_slug,
+        cr.location,
+        COALESCE(content_stats.content_count, 0) AS content_count,
+        MAX(c.created_at) AS last_content_at
       FROM creator_accounts ca
       JOIN creators cr ON ca.creator_id = cr.id
+      LEFT JOIN content c ON c.creator_id = cr.id
+      LEFT JOIN (
+        SELECT creator_id, COUNT(*) AS content_count
+        FROM content
+        GROUP BY creator_id
+      ) content_stats ON content_stats.creator_id = cr.id
     `;
 
     let params = [];
 
     if (search) {
-      query += ` WHERE ca.email LIKE ? OR cr.name LIKE ?`;
-      params.push(`%${search}%`, `%${search}%`);
+      query += ` WHERE ca.email LIKE ? OR cr.name LIKE ? OR cr.profile_slug LIKE ? OR cr.location LIKE ?`;
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
-    query += ` ORDER BY ca.created_at DESC LIMIT ? OFFSET ?`;
+    query += `
+      GROUP BY
+        ca.id,
+        ca.creator_id,
+        ca.email,
+        ca.is_suspended,
+        ca.is_approved,
+        ca.created_at,
+        ca.updated_at,
+        cr.name,
+        cr.role,
+        cr.is_active,
+        cr.profile_slug,
+        cr.location,
+        content_stats.content_count
+      ORDER BY ca.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
     params.push(limit, offset);
 
     const users = db.prepare(query).all(...params);
-    const total = db.prepare(`SELECT COUNT(*) as count FROM creator_accounts ${search ? 'WHERE email LIKE ? OR ' : ''}`).get(...(search ? [`%${search}%`, `%${search}%`] : [])).count;
+    const totalQuery = search
+      ? `
+        SELECT COUNT(*) as count
+        FROM creator_accounts ca
+        JOIN creators cr ON ca.creator_id = cr.id
+        WHERE ca.email LIKE ? OR cr.name LIKE ? OR cr.profile_slug LIKE ? OR cr.location LIKE ?
+      `
+      : 'SELECT COUNT(*) as count FROM creator_accounts';
+    const total = db.prepare(totalQuery).get(...(search ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`] : [])).count;
 
     res.json({
       data: users,
@@ -286,8 +363,7 @@ router.post('/users/:userId/reactivate', (req, res, next) => {
   }
 });
 
-// POST /api/admin/users/:userId/verify
-router.post('/users/:userId/verify', (req, res, next) => {
+function handleVerify(req, res, next) {
   try {
     const db = getDB();
     const { userId } = req.params;
@@ -306,10 +382,45 @@ router.post('/users/:userId/verify', (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+}
 
-// POST /api/admin/users/:userId/reset-password
-router.post('/users/:userId/reset-password', (req, res, next) => {
+// POST /api/admin/users/:userId/verify
+router.post('/users/:userId/verify', handleVerify);
+
+// POST/PUT /api/admin/users/:userId/email-verify
+router.post('/users/:userId/email-verify', handleVerify);
+router.put('/users/:userId/email-verify', handleVerify);
+
+// POST/PUT /api/admin/users/:userId/role
+function handleRoleChange(req, res, next) {
+  try {
+    const db = getDB();
+    const { userId } = req.params;
+    const { role } = req.body;
+
+    if (!role || !['CREATOR', 'BUSINESS'].includes(role)) {
+      return res.status(400).json({ error: 'Valid role is required (CREATOR or BUSINESS)' });
+    }
+
+    const existing = db.prepare('SELECT * FROM creators WHERE id = ?').get(userId);
+    if (!existing) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const now = getCurrentTimestamp();
+    db.prepare('UPDATE creators SET role = ?, updated_at = ? WHERE id = ?').run(role, now, userId);
+    logAudit(db, 'user_role_change', req.user.email, userId, existing, { role }, '');
+
+    return res.json({ message: 'User role updated successfully' });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+router.post('/users/:userId/role', handleRoleChange);
+router.put('/users/:userId/role', handleRoleChange);
+
+function handleResetPassword(req, res, next) {
   try {
     const db = getDB();
     const { userId } = req.params;
@@ -334,6 +445,19 @@ router.post('/users/:userId/reset-password', (req, res, next) => {
   } catch (err) {
     next(err);
   }
+}
+
+// POST /api/admin/users/:userId/reset-password
+router.post('/users/:userId/reset-password', handleResetPassword);
+
+// POST /api/admin/users/reset-password
+router.post('/users/reset-password', (req, res, next) => {
+  const { userId } = req.body;
+  if (!userId) {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+  req.params.userId = userId;
+  return handleResetPassword(req, res, next);
 });
 
 // ===== AUDIT LOG =====
@@ -399,6 +523,21 @@ router.get('/audit/export', (req, res, next) => {
 // GET /api/admin/analytics
 router.get('/analytics', (req, res, next) => {
   try {
+    if (process.env.MOCK_ANALYTICS === 'true') {
+      return res.json({
+        kpis: {
+          totalCreators: 12,
+          totalBusinesses: 3,
+          totalContent: 41,
+          publishedContent: 29,
+          pendingContent: 12,
+          last7DaysContent: 9
+        },
+        weeklyTrend: [],
+        isMockData: true
+      });
+    }
+
     const db = getDB();
 
     const totalCreators = db.prepare('SELECT COUNT(*) as count FROM creators WHERE role = "CREATOR" AND is_active = 1').get().count;
@@ -445,6 +584,17 @@ router.get('/analytics', (req, res, next) => {
 // GET /api/admin/alerts
 router.get('/alerts', (req, res, next) => {
   try {
+    if (process.env.MOCK_LIVE_ALERTS === 'true') {
+      return res.json({
+        data: [
+          { type: 'new_content', title_or_name: 'Mock Content Submission', created_at: getCurrentTimestamp() },
+          { type: 'new_user', title_or_name: 'Mock User Signup', created_at: getCurrentTimestamp() }
+        ],
+        isMockData: true,
+        timestamp: getCurrentTimestamp()
+      });
+    }
+
     const db = getDB();
 
     const recentContent = db.prepare(`

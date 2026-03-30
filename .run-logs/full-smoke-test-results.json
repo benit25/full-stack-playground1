@@ -1,0 +1,405 @@
+{
+  "startedAt": "2026-03-26T12:59:37.498Z",
+  "finishedAt": "2026-03-26T12:59:39.276Z",
+  "passed": 41,
+  "failed": 0,
+  "results": [
+    {
+      "status": "PASS",
+      "name": "Backend health endpoint",
+      "detail": "GET /healthz returned 200 with status=ok",
+      "evidence": {
+        "status": "ok",
+        "timestamp": "2026-03-26T12:59:37.639Z"
+      },
+      "timestamp": "2026-03-26T12:59:37.655Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Backend root metadata endpoint",
+      "detail": "GET / returned API metadata and UI mount points",
+      "evidence": {
+        "name": "PLXYGROUND API",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+          "health": "/healthz",
+          "auth": "/api/auth",
+          "messages": "/api/messages",
+          "creators": "/api/creators",
+          "content": "/api/content",
+          "opportunities": "/api/opportunities",
+          "admin": "/api/admin"
+        },
+        "web": {
+          "app": "/app",
+          "admin_panel": "/admin"
+        }
+      },
+      "timestamp": "2026-03-26T12:59:37.664Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Frontend dev server responds",
+      "detail": "Frontend dev server returned HTML shell on port 19006",
+      "evidence": {},
+      "timestamp": "2026-03-26T12:59:37.678Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin dev server responds",
+      "detail": "Admin dev server returned HTML shell on port 3012",
+      "evidence": {},
+      "timestamp": "2026-03-26T12:59:37.686Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Backend-served /app fallback responds",
+      "detail": "Backend served the built frontend at /app/",
+      "evidence": {},
+      "timestamp": "2026-03-26T12:59:37.699Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Backend-served /admin fallback responds",
+      "detail": "Backend served the built admin UI at /admin/",
+      "evidence": {},
+      "timestamp": "2026-03-26T12:59:37.703Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator discovery list",
+      "detail": "Creators list returned 10 records",
+      "evidence": {
+        "total": 35
+      },
+      "timestamp": "2026-03-26T12:59:37.721Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator detail by slug",
+      "detail": "Slug lookup resolved Sarah Johnson",
+      "evidence": {
+        "id": "8b8cad62-11ae-4270-9d9c-625783fb9ebe",
+        "contentCount": 7
+      },
+      "timestamp": "2026-03-26T12:59:37.733Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator detail by id",
+      "detail": "ID lookup resolved Sarah Johnson",
+      "evidence": {
+        "id": "8b8cad62-11ae-4270-9d9c-625783fb9ebe",
+        "contentCount": 7
+      },
+      "timestamp": "2026-03-26T12:59:37.738Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Opportunities listing",
+      "detail": "Opportunities endpoint returned 5 records",
+      "evidence": {
+        "total": 5
+      },
+      "timestamp": "2026-03-26T12:59:37.745Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin login endpoint",
+      "detail": "Admin login succeeded via 127.0.0.1",
+      "evidence": {
+        "email": "admin@plxyground.local"
+      },
+      "timestamp": "2026-03-26T12:59:37.999Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator signup endpoint",
+      "detail": "Creator signup created smoke_creator_1774529977570@plxyground.local via 127.0.0.1",
+      "evidence": {
+        "id": "c54fb210-1c41-495d-83d0-71ac5d5f70c0"
+      },
+      "timestamp": "2026-03-26T12:59:38.199Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator login endpoint",
+      "detail": "Creator login succeeded via 127.0.0.1",
+      "evidence": {
+        "id": "c54fb210-1c41-495d-83d0-71ac5d5f70c0"
+      },
+      "timestamp": "2026-03-26T12:59:38.349Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Business signup endpoint",
+      "detail": "Business signup created smoke_business_1774529977570@plxyground.local via 127.0.0.1",
+      "evidence": {
+        "id": "24e23412-7a45-4a51-a9f9-0a66735f2c88"
+      },
+      "timestamp": "2026-03-26T12:59:38.504Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Business login endpoint",
+      "detail": "Business login succeeded via 127.0.0.1",
+      "evidence": {
+        "id": "24e23412-7a45-4a51-a9f9-0a66735f2c88"
+      },
+      "timestamp": "2026-03-26T12:59:38.661Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator profile update",
+      "detail": "Creator profile update persisted bio, location, image, and social links",
+      "evidence": {
+        "bio": "Smoke test bio",
+        "location": "London",
+        "profile_image_url": "https://images.unsplash.com/photo-1517649763962-0c623066013b",
+        "social_links": {
+          "instagram": "https://instagram.com/smokecreator",
+          "website": "https://example.com/smokecreator"
+        }
+      },
+      "timestamp": "2026-03-26T12:59:38.682Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator draft content creation",
+      "detail": "Draft content was created and queued for moderation",
+      "evidence": {
+        "id": "43b8daa9-1475-45a4-9945-c3850761e550"
+      },
+      "timestamp": "2026-03-26T12:59:38.706Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Draft content is hidden from the public feed",
+      "detail": "Unauthenticated request to draft content was correctly rejected",
+      "evidence": {
+        "error": "Content not available"
+      },
+      "timestamp": "2026-03-26T12:59:38.711Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Draft content is accessible to the owner",
+      "detail": "Owner could retrieve unpublished draft content",
+      "evidence": {
+        "id": "43b8daa9-1475-45a4-9945-c3850761e550"
+      },
+      "timestamp": "2026-03-26T12:59:38.716Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin moderation queue lists the draft",
+      "detail": "Moderation queue exposed the new draft content",
+      "evidence": {
+        "id": "bf2e6ea1-f144-4919-a0cd-bd69bd6c40ea",
+        "type": "content",
+        "status": "pending",
+        "title_or_name": "Smoke Draft 1774529977570",
+        "submitted_by": "smoke_creator_1774529977570@plxyground.local",
+        "report_count": 0,
+        "assigned_admin": null,
+        "entity_id": "43b8daa9-1475-45a4-9945-c3850761e550",
+        "created_at": "2026-03-26T12:59:38.690Z",
+        "updated_at": "2026-03-26T12:59:38.690Z"
+      },
+      "timestamp": "2026-03-26T12:59:38.724Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin can assign moderation queue items",
+      "detail": "Bulk assign action succeeded for the queue item",
+      "evidence": {
+        "message": "Bulk assign completed",
+        "updatedCount": 1
+      },
+      "timestamp": "2026-03-26T12:59:38.739Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin can approve queued content",
+      "detail": "Bulk approve action published the queued content",
+      "evidence": {
+        "message": "Bulk approve completed",
+        "updatedCount": 1
+      },
+      "timestamp": "2026-03-26T12:59:38.768Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Approved content is searchable in the public feed",
+      "detail": "Approved content appeared in public feed search results",
+      "evidence": {
+        "matches": 1
+      },
+      "timestamp": "2026-03-26T12:59:38.778Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator can create immediately published content",
+      "detail": "Creator created a directly published post",
+      "evidence": {
+        "id": "8ad7239d-e90d-41a6-bbb0-17b05d517d5a"
+      },
+      "timestamp": "2026-03-26T12:59:38.791Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator can update own published content",
+      "detail": "Creator updated title, type, and body of a published post",
+      "evidence": {
+        "message": "Content updated successfully"
+      },
+      "timestamp": "2026-03-26T12:59:38.812Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin content listing includes smoke content",
+      "detail": "Admin content listing exposed the smoke post",
+      "evidence": {
+        "total": 107
+      },
+      "timestamp": "2026-03-26T12:59:38.825Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin can edit content metadata",
+      "detail": "Admin content edit endpoint persisted changes",
+      "evidence": {
+        "message": "Content updated successfully"
+      },
+      "timestamp": "2026-03-26T12:59:38.853Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Direct messaging conversation creation",
+      "detail": "Conversation endpoint created or reused a 1:1 thread",
+      "evidence": {
+        "id": "03d44759-7847-47bd-a91d-bbac48076ee9"
+      },
+      "timestamp": "2026-03-26T12:59:38.872Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Direct messaging send and fetch",
+      "detail": "Conversation message send and retrieval both worked",
+      "evidence": {
+        "messageId": "fc2b5cf4-c9a4-44b9-8bd9-18983a9b46fb"
+      },
+      "timestamp": "2026-03-26T12:59:38.890Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Conversation list for both participants",
+      "detail": "Conversation lists are populated for both participants",
+      "evidence": {},
+      "timestamp": "2026-03-26T12:59:38.902Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin user listing and search",
+      "detail": "Admin users search located the smoke creator account",
+      "evidence": {
+        "matches": 1
+      },
+      "timestamp": "2026-03-26T12:59:38.911Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin can suspend a creator account",
+      "detail": "Suspend endpoint set is_suspended=1",
+      "evidence": {
+        "message": "User suspended successfully"
+      },
+      "timestamp": "2026-03-26T12:59:38.938Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin can reactivate a creator account",
+      "detail": "Reactivate endpoint cleared is_suspended",
+      "evidence": {
+        "message": "User reactivated successfully"
+      },
+      "timestamp": "2026-03-26T12:59:38.960Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin can verify a creator account",
+      "detail": "Verify endpoint marked the account as approved",
+      "evidence": {
+        "message": "User verified successfully"
+      },
+      "timestamp": "2026-03-26T12:59:38.985Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin can reset a creator password",
+      "detail": "Admin reset-password endpoint succeeded",
+      "evidence": {
+        "message": "Password reset successfully"
+      },
+      "timestamp": "2026-03-26T12:59:39.184Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Audit log listing",
+      "detail": "Audit log returned 50 entries",
+      "evidence": {
+        "total": 77
+      },
+      "timestamp": "2026-03-26T12:59:39.192Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Audit CSV export",
+      "detail": "Audit export endpoint returned CSV content",
+      "evidence": {},
+      "timestamp": "2026-03-26T12:59:39.200Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin analytics endpoint",
+      "detail": "Analytics endpoint returned KPI metrics",
+      "evidence": {
+        "totalCreators": 28,
+        "totalBusinesses": 9,
+        "totalContent": 107,
+        "publishedContent": 76,
+        "pendingContent": 31,
+        "last7DaysContent": 5
+      },
+      "timestamp": "2026-03-26T12:59:39.212Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin live alerts endpoint",
+      "detail": "Live alerts captured recent user or content activity",
+      "evidence": {
+        "count": 14
+      },
+      "timestamp": "2026-03-26T12:59:39.220Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator can delete own published content",
+      "detail": "Creator delete endpoint removed a published post",
+      "evidence": {
+        "message": "Content deleted successfully"
+      },
+      "timestamp": "2026-03-26T12:59:39.247Z"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin can delete approved content",
+      "detail": "Admin delete endpoint removed approved content",
+      "evidence": {
+        "message": "Content deleted successfully"
+      },
+      "timestamp": "2026-03-26T12:59:39.276Z"
+    }
+  ]
+}

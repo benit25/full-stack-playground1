@@ -1,10 +1,25 @@
 import initSqlJs from 'sql.js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(process.cwd(), 'plxyground.db');
+function resolveSqlitePath() {
+  const configured = (process.env.DATABASE_URL || '').trim();
+
+  if (configured) {
+    if (path.isAbsolute(configured)) {
+      return configured;
+    }
+    return path.resolve(process.cwd(), configured);
+  }
+
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    return '/tmp/plxyground.db';
+  }
+
+  return path.resolve(process.cwd(), 'plxyground.db');
+}
+
+const dbPath = resolveSqlitePath();
 
 let dbInstance = null;
 let SQL = null;
@@ -14,6 +29,66 @@ async function getSQL() {
     SQL = await initSqlJs();
   }
   return SQL;
+}
+
+function ensureSchemaUpgrades(db) {
+  const upgrades = [
+    `
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id TEXT PRIMARY KEY,
+      account_type TEXT CHECK(account_type IN ('CREATOR', 'BUSINESS', 'ADMIN')) NOT NULL,
+      account_id TEXT NOT NULL,
+      token_hash TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL
+    )
+    `,
+    'CREATE INDEX IF NOT EXISTS idx_password_reset_lookup ON password_reset_tokens(account_type, account_id, used_at)',
+    'CREATE INDEX IF NOT EXISTS idx_password_reset_expiry ON password_reset_tokens(expires_at)',
+
+    // Messaging (1:1 + group-ready)
+    `
+    CREATE TABLE IF NOT EXISTS conversations (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS conversation_participants (
+      conversation_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (conversation_id, user_id),
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id),
+      FOREIGN KEY (user_id) REFERENCES creators(id)
+    )
+    `,
+    `
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      sender_id TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id),
+      FOREIGN KEY (sender_id) REFERENCES creators(id)
+    )
+    `,
+    'CREATE INDEX IF NOT EXISTS idx_messages_conversation_created_at ON messages(conversation_id, created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_conversation_participants_user_id ON conversation_participants(user_id)'
+  ];
+
+  for (const statement of upgrades) {
+    db.run(statement);
+  }
+
+  // Backward-compatible column add for existing databases
+  const creatorTableInfo = db.exec('PRAGMA table_info(creators)');
+  const creatorCols = creatorTableInfo?.[0]?.values?.map((row) => row[1]) || [];
+  if (!creatorCols.includes('profile_image_url')) {
+    db.run('ALTER TABLE creators ADD COLUMN profile_image_url TEXT');
+  }
 }
 
 export async function initializeDB() {
@@ -37,6 +112,8 @@ export async function initializeDB() {
     if (!tables || tables.length === 0) {
       createSchema(db);
     }
+    ensureSchemaUpgrades(db);
+    saveDB(db);
 
     console.log(`✓ Database initialized at ${dbPath}`);
     return db;
@@ -54,6 +131,7 @@ function createSchema(db) {
       role TEXT CHECK(role IN ('CREATOR', 'BUSINESS')) DEFAULT 'CREATOR',
       bio TEXT,
       location TEXT,
+      profile_image_url TEXT,
       profile_slug TEXT UNIQUE,
       social_links TEXT DEFAULT '{}',
       is_active INTEGER DEFAULT 1,
@@ -150,12 +228,24 @@ function createSchema(db) {
       undone_at TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id TEXT PRIMARY KEY,
+      account_type TEXT CHECK(account_type IN ('CREATOR', 'BUSINESS', 'ADMIN')) NOT NULL,
+      account_id TEXT NOT NULL,
+      token_hash TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_content_creator_id ON content(creator_id);
     CREATE INDEX IF NOT EXISTS idx_content_published ON content(is_published);
     CREATE INDEX IF NOT EXISTS idx_content_created_at ON content(created_at);
     CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
     CREATE INDEX IF NOT EXISTS idx_moderation_queue_status ON moderation_queue(status);
     CREATE INDEX IF NOT EXISTS idx_creator_accounts_email ON creator_accounts(email);
+    CREATE INDEX IF NOT EXISTS idx_password_reset_lookup ON password_reset_tokens(account_type, account_id, used_at);
+    CREATE INDEX IF NOT EXISTS idx_password_reset_expiry ON password_reset_tokens(expires_at);
   `;
 
   try {
@@ -171,6 +261,7 @@ function createSchema(db) {
 
 function saveDB(db) {
   try {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     const data = db.export();
     const buffer = Buffer.from(data);
     fs.writeFileSync(dbPath, buffer);

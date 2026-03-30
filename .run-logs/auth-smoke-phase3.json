@@ -1,0 +1,27 @@
+{
+  "phase": "phase3",
+  "passed": 4,
+  "failed": 0,
+  "results": [
+    {
+      "status": "PASS",
+      "name": "Business forgot-password returns stub token",
+      "detail": "smoke_business_1774529977570@plxyground.local"
+    },
+    {
+      "status": "PASS",
+      "name": "Business reset-password accepts the stub token",
+      "detail": "Business password reset completed"
+    },
+    {
+      "status": "PASS",
+      "name": "Business login succeeds after forgot/reset flow",
+      "detail": "Business logged in with reset password"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin forgot-password returns stub token",
+      "detail": "Admin forgot-password returned a stub token"
+    }
+  ]
+}

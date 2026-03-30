@@ -1,0 +1,47 @@
+{
+  "phase": "phase2",
+  "passed": 8,
+  "failed": 0,
+  "results": [
+    {
+      "status": "PASS",
+      "name": "Suspend latest smoke creator",
+      "detail": "smoke_creator_1774529977570@plxyground.local"
+    },
+    {
+      "status": "PASS",
+      "name": "Suspended creator login is rejected",
+      "detail": "Login returned ACCOUNT_SUSPENDED"
+    },
+    {
+      "status": "PASS",
+      "name": "Reactivate latest smoke creator",
+      "detail": "smoke_creator_1774529977570@plxyground.local"
+    },
+    {
+      "status": "PASS",
+      "name": "Admin password reset updates creator credentials",
+      "detail": "Admin reset-password returned 200"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator login succeeds after admin reset",
+      "detail": "Creator logged in with admin-set password"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator forgot-password returns stub token",
+      "detail": "Stub reset token returned"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator reset-password accepts the stub token",
+      "detail": "Creator password reset completed"
+    },
+    {
+      "status": "PASS",
+      "name": "Creator login succeeds after forgot/reset flow",
+      "detail": "Creator logged in with forgot/reset password"
+    }
+  ]
+}

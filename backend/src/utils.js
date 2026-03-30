@@ -2,8 +2,15 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-prod';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is required');
+  }
+  return secret;
+}
 
 export function hashPassword(password) {
   return bcrypt.hashSync(password, 10);
@@ -16,13 +23,21 @@ export function verifyPassword(password, hash) {
 export function generateToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: JWT_EXPIRES_IN }
   );
 }
 
 export function generateId() {
   return crypto.randomUUID();
+}
+
+export function generateSecureToken(size = 32) {
+  return crypto.randomBytes(size).toString('hex');
+}
+
+export function hashToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
 }
 
 export function getCurrentTimestamp() {
@@ -72,6 +87,8 @@ export default {
   verifyPassword,
   generateToken,
   generateId,
+  generateSecureToken,
+  hashToken,
   getCurrentTimestamp,
   escapeHtml,
   trimInput,

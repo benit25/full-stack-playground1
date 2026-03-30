@@ -1,6 +1,6 @@
 import express from 'express';
 import { getDB } from '../db.js';
-import { verifyToken, validatePagination, validateContentCreate } from '../middleware.js';
+import { verifyToken, optionalVerifyToken, validatePagination, validateContentCreate } from '../middleware.js';
 import { generateId, getCurrentTimestamp, logAudit, escapeHtml } from '../utils.js';
 
 const router = express.Router();
@@ -48,7 +48,7 @@ router.get('/', validatePagination, (req, res, next) => {
 });
 
 // GET /api/content/:id
-router.get('/:id', (req, res, next) => {
+router.get('/:id', optionalVerifyToken, (req, res, next) => {
   try {
     const db = getDB();
     const { id } = req.params;
