@@ -46,6 +46,13 @@ function ensureDatabaseReady() {
   return dbReadyPromise;
 }
 
+function resolveRepoRoot() {
+  const candidates = [process.cwd(), path.resolve(process.cwd(), '..')];
+  return candidates.find((candidate) =>
+    fs.existsSync(path.join(candidate, 'frontend')) || fs.existsSync(path.join(candidate, 'admin-panel'))
+  ) || process.cwd();
+}
+
 app.use(helmet());
 const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:19006')
   .split(',')
@@ -86,6 +93,43 @@ app.get('/api/healthz', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use((req, res, next) => {
+  if (req.path === '/healthz' || req.path === '/api/healthz' || req.path === '/') {
+    return next();
+  }
+
+  ensureDatabaseReady()
+    .then(() => next())
+    .catch(next);
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/business/auth', businessAuthRoutes);
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/creators', creatorRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/opportunities', opportunitiesRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageRoutes);
+
+const repoRoot = resolveRepoRoot();
+const frontendDist = path.join(repoRoot, 'frontend', 'dist');
+const adminDist = path.join(repoRoot, 'admin-panel', 'dist');
+const frontendIndex = path.join(frontendDist, 'index.html');
+
+if (fs.existsSync(frontendIndex)) {
+  const frontendAssets = path.join(frontendDist, 'assets');
+  if (fs.existsSync(frontendAssets)) {
+    app.use('/assets', express.static(frontendAssets));
+  }
+
+  app.use('/', express.static(frontendDist));
+  app.use('/app', express.static(frontendDist));
+  app.get('/', (req, res) => res.sendFile(frontendIndex));
+  app.get('/app', (req, res) => res.sendFile(frontendIndex));
+  app.get('/app/*', (req, res) => res.sendFile(path.join(frontendDist, 'index.html')));
+}
+
 app.get('/', (req, res) => {
   res.json({
     name: 'PLXYGROUND API',
@@ -106,39 +150,6 @@ app.get('/', (req, res) => {
     }
   });
 });
-
-app.use((req, res, next) => {
-  if (req.path === '/healthz' || req.path === '/api/healthz' || req.path === '/') {
-    return next();
-  }
-
-  ensureDatabaseReady()
-    .then(() => next())
-    .catch(next);
-});
-
-app.use('/api/auth', authRoutes);
-app.use('/api/business/auth', businessAuthRoutes);
-app.use('/api/admin/auth', adminAuthRoutes);
-app.use('/api/creators', creatorRoutes);
-app.use('/api/content', contentRoutes);
-app.use('/api/opportunities', opportunitiesRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/messages', messageRoutes);
-
-const repoRoot = path.resolve(process.cwd(), '..');
-const frontendDist = path.join(repoRoot, 'frontend', 'dist');
-const adminDist = path.join(repoRoot, 'admin-panel', 'dist');
-
-if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
-  const frontendAssets = path.join(frontendDist, 'assets');
-  if (fs.existsSync(frontendAssets)) {
-    app.use('/assets', express.static(frontendAssets));
-  }
-
-  app.use('/app', express.static(frontendDist));
-  app.get('/app/*', (req, res) => res.sendFile(path.join(frontendDist, 'index.html')));
-}
 
 if (fs.existsSync(path.join(adminDist, 'index.html'))) {
   const adminAssets = path.join(adminDist, 'assets');

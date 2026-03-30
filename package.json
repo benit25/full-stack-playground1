@@ -1,0 +1,7 @@
+{
+  "name": "full-stack-plxyground-root",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix admin-panel install && npm --prefix admin-panel run build"
+  }
+}

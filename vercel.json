@@ -2,7 +2,11 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "includeFiles": "backend/node_modules/sql.js/dist/sql-wasm.wasm"
+      "includeFiles": [
+        "backend/node_modules/sql.js/dist/sql-wasm.wasm",
+        "frontend/dist/**",
+        "admin-panel/dist/**"
+      ]
     }
   },
   "rewrites": [
