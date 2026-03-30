@@ -21,6 +21,7 @@ dotenv.config();
 const app = express();
 const PORT = parseInt(process.env.PORT || '3011', 10);
 const HOST = process.env.HOST || '127.0.0.1';
+let dbReadyPromise = null;
 
 function isPrivateHostname(hostname) {
   if (!hostname) return false;
@@ -35,7 +36,15 @@ function isPrivateHostname(hostname) {
   return false;
 }
 
-await initializeDB();
+function ensureDatabaseReady() {
+  if (!dbReadyPromise) {
+    dbReadyPromise = initializeDB().catch((err) => {
+      dbReadyPromise = null;
+      throw err;
+    });
+  }
+  return dbReadyPromise;
+}
 
 app.use(helmet());
 const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:19006')
@@ -98,6 +107,16 @@ app.get('/', (req, res) => {
   });
 });
 
+app.use((req, res, next) => {
+  if (req.path === '/healthz' || req.path === '/api/healthz' || req.path === '/') {
+    return next();
+  }
+
+  ensureDatabaseReady()
+    .then(() => next())
+    .catch(next);
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/business/auth', businessAuthRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
@@ -142,9 +161,10 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 if (!process.env.VERCEL) {
-  try {
-    app.listen(PORT, HOST, () => {
-      console.log(`
+  ensureDatabaseReady()
+    .then(() => {
+      app.listen(PORT, HOST, () => {
+        console.log(`
 ╔════════════════════════════════════════╗
 ║   🏀 PLXYGROUND BACKEND STARTED        ║
 ║   Port: ${PORT}                           ║
@@ -153,13 +173,14 @@ if (!process.env.VERCEL) {
 ╚════════════════════════════════════════╝
       `);
 
-      const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
-      console.log(`Listening on http://${displayHost}:${PORT}`);
+        const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
+        console.log(`Listening on http://${displayHost}:${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('❌ Failed to start server:', err);
+      process.exit(1);
     });
-  } catch (err) {
-    console.error('❌ Failed to start server:', err);
-    process.exit(1);
-  }
 }
 
 export default app;
