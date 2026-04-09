@@ -4,11 +4,11 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d').trim();
 let bcryptLib = null;
 
 function getJwtSecret() {
-  const secret = process.env.JWT_SECRET;
+  const secret = (process.env.JWT_SECRET || '').trim();
   if (!secret) {
     throw new Error('JWT_SECRET is required');
   }

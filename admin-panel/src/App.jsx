@@ -662,8 +662,28 @@ function ContentPanel() {
                 <textarea value={editForm.body} onChange={(e) => setEditForm({ ...editForm, body: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Media URL (Required)</label>
-                <input value={editForm.media_url} onChange={(e) => setEditForm({ ...editForm, media_url: e.target.value })} />
+                <label>Media (Required)</label>
+                <div style={{ marginBottom: 12 }}>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setEditForm({ ...editForm, media_url: event.target?.result });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                  />
+                </div>
+                {editForm.media_url && (
+                  <div style={{ marginBottom: 12 }}>
+                    <img src={editForm.media_url} alt="Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4 }} />
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label>Content Type</label>

@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 
 function getJwtSecret() {
-  const secret = process.env.JWT_SECRET;
+  const secret = (process.env.JWT_SECRET || '').trim();
   if (!secret) {
     throw new Error('JWT_SECRET is required');
   }

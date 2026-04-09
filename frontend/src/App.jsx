@@ -638,10 +638,27 @@ function PostForm({ title, initial, onSubmit, onBack }) {
   const [form, setForm] = useState(initial || initialPost);
   const [banner, setBanner] = useState({ message: '', type: 'info' });
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(initial?.media_url || '');
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result;
+      setForm({ ...form, media_url: base64 });
+      setPreview(base64);
+    };
+    reader.onerror = () => {
+      setBanner({ message: 'Failed to read file', type: 'error' });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.media_url.trim()) return setBanner({ message: 'Media URL is required', type: 'error' });
+    if (!form.media_url.trim()) return setBanner({ message: 'Please select an image', type: 'error' });
     if (!form.title.trim() || !form.body.trim()) return setBanner({ message: 'Title and body are required', type: 'error' });
     setLoading(true);
     try {
@@ -667,7 +684,15 @@ function PostForm({ title, initial, onSubmit, onBack }) {
           </select>
           <input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <textarea placeholder="Body" value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} />
-          <input placeholder="Media URL (required)" value={form.media_url} onChange={(e) => setForm({ ...form, media_url: e.target.value })} />
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', marginBottom: 6, fontWeight: 'bold' }}>Select Image</label>
+            <input type="file" accept="image/*" onChange={handleImageSelect} style={{ display: 'block', marginBottom: 12 }} />
+            {preview && (
+              <div style={{ marginBottom: 12 }}>
+                <img src={preview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 250, borderRadius: 4 }} />
+              </div>
+            )}
+          </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <input type="checkbox" checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} />
             Publish now
@@ -728,6 +753,7 @@ function Profile({ user, onBack }) {
   const [creator, setCreator] = useState(null);
   const [form, setForm] = useState({ bio: '', location: '', profile_image_url: '', social_links: { instagram: '', website: '' } });
   const [banner, setBanner] = useState({ message: '', type: 'info' });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -745,12 +771,30 @@ function Profile({ user, onBack }) {
     })();
   }, [user.id]);
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result;
+      setForm({ ...form, profile_image_url: base64 });
+    };
+    reader.onerror = () => {
+      setBanner({ message: 'Failed to read file', type: 'error' });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const save = async () => {
+    setLoading(true);
     try {
       await creatorAPI.update(user.id, form);
       setBanner({ message: 'Profile updated', type: 'success' });
     } catch (err) {
       setBanner({ message: err.message || 'Update failed', type: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -771,12 +815,15 @@ function Profile({ user, onBack }) {
               />
             </div>
             <p><strong>{creator.name}</strong> ({creator.role})</p>
-            <input placeholder="Profile image URL" value={form.profile_image_url} onChange={(e) => setForm({ ...form, profile_image_url: e.target.value })} />
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 'bold' }}>Profile Image</label>
+              <input type="file" accept="image/*" onChange={handleImageSelect} style={{ display: 'block', marginBottom: 12 }} />
+            </div>
             <textarea placeholder="Bio" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
             <input placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
             <input placeholder="Instagram URL" value={form.social_links.instagram} onChange={(e) => setForm({ ...form, social_links: { ...form.social_links, instagram: e.target.value } })} />
             <input placeholder="Website URL" value={form.social_links.website} onChange={(e) => setForm({ ...form, social_links: { ...form.social_links, website: e.target.value } })} />
-            <button className="btn btn-primary" onClick={save}>Save Profile</button>
+            <button className="btn btn-primary" onClick={save} disabled={loading}>{loading ? 'Saving...' : 'Save Profile'}</button>
             <h3 style={{ marginTop: 18 }}>Posts</h3>
             {(creator.content || []).map((post) => <p key={post.id}>{post.title}</p>)}
           </>
