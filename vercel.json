@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm install && cd backend && npm install && cd ../frontend && npm install && npm run build && cd ../admin-panel && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/index.js": {
